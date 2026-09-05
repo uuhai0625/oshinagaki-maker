@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>同人誌 お品書きメーカー(完全無料)</title>
+<style>
+  :root {
+    --accent: #c17a2e;
+    --accent-dark: #8a561c;
+    --bg: #fbf7f1;
+    --card: #ffffff;
+    --border: #ecdfc9;
+    --text: #2e2823;
+    --muted: #8a7d6c;
+    --soldout: #c94a4a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    padding: 28px 20px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 8px; font-size: 22px; }
+  header p { margin: 0; font-size: 13px; opacity: 0.9; }
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  @media (min-width: 900px) {
+    main { grid-template-columns: 1fr 1fr; align-items: start; }
+    .preview-col { position: sticky; top: 20px; }
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    margin: 0 0 14px;
+    font-size: 16px;
+    border-left: 4px solid var(--accent);
+    padding-left: 10px;
+  }
+  .field { margin-bottom: 12px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .field input[type="text"], .field textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .item-row {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .item-row .item-top {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .item-row input[type="text"] { flex: 1; }
+  .item-row .priceInput { max-width: 110px; flex: none; }
+  .item-row select {
+    padding: 8px 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    max-width: 120px;
+  }
+  .item-row .removeItemBtn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    cursor: pointer;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .btn.ghost {
+    background: none;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+  }
+  .btn.small { padding: 6px 12px; font-size: 13px; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .theme-options { display: flex; gap: 10px; flex-wrap: wrap; }
+  .theme-swatch {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+  }
+  .theme-swatch.selected { border-color: var(--text); }
+  .note {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+  }
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 24px 20px 40px;
+  }
+  footer a { color: var(--accent); }
+
+  /* --- price sheet preview --- */
+  .sheet-outer { display: flex; justify-content: center; }
+  .price-sheet {
+    width: 100%;
+    max-width: 480px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+    background: #fff;
+  }
+  .price-sheet .sheetHead {
+    color: #fff;
+    padding: 18px 20px;
+    text-align: center;
+  }
+  .price-sheet .sheetHead .circleName { font-size: 19px; font-weight: bold; }
+  .price-sheet .sheetHead .eventName { font-size: 12px; opacity: 0.9; margin-top: 4px; }
+  .price-sheet .sheetHead .message { font-size: 11px; opacity: 0.95; margin-top: 8px; white-space: pre-wrap; }
+  .price-sheet .sheetBody { padding: 14px 20px 20px; }
+  .price-sheet .sheetItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--border);
+    gap: 10px;
+  }
+  .price-sheet .sheetItem:last-child { border-bottom: none; }
+  .price-sheet .itemName { font-weight: bold; font-size: 14px; }
+  .price-sheet .itemSub { font-size: 11px; color: var(--muted); margin-top: 2px; white-space: pre-wrap; }
+  .price-sheet .itemPrice { font-size: 14px; font-weight: bold; white-space: nowrap; }
+  .price-sheet .soldout .itemName, .price-sheet .soldout .itemPrice { color: var(--soldout); text-decoration: line-through; }
+  .price-sheet .statusTag {
+    font-size: 10px;
+    background: var(--soldout);
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .price-sheet .statusTag.few { background: #c17a2e; }
+
+  @media print {
+    header, .form-col, .btn-row, .no-print { display: none !important; }
+    body { background: #fff; }
+    main { display: block; padding: 0; max-width: none; }
+    .preview-col { position: static; }
+    .card { border: none; box-shadow: none; }
+    .price-sheet { box-shadow: none; max-width: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>同人誌 お品書きメーカー</h1>
+  <p>頒布物と価格を入れるだけで、卓上に置けるお品書きシートを作成(完全無料・登録不要)</p>
+</header>
+
+<main>
+
+  <div class="form-col">
+
+    <div class="card">
+      <h2>① 基本情報</h2>
+      <div class="field">
+        <label for="circleName">サークル名</label>
+        <input type="text" id="circleName" placeholder="例: つきよみ堂">
+      </div>
+      <div class="field">
+        <label for="eventName">イベント名(任意)</label>
+        <input type="text" id="eventName" placeholder="例: 〇〇即売会 スペース あ-12">
+      </div>
+      <div class="field">
+        <label for="message">一言メッセージ(任意)</label>
+        <textarea id="message" placeholder="例: お手に取っていただきありがとうございます!"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>② 頒布物リスト</h2>
+      <div id="itemRows"></div>
+      <button type="button" class="btn ghost small" id="addItemBtn">+ 頒布物を追加</button>
+    </div>
+
+    <div class="card">
+      <h2>③ デザインテーマ</h2>
+      <div class="theme-options" id="themeOptions"></div>
+    </div>
+
+    <div class="btn-row no-print">
+      <button class="btn" id="saveBtn">このブラウザに保存</button>
+      <button class="btn ghost" id="loadBtn">保存データを読み込む</button>
+    </div>
+  </div>
+
+  <div class="preview-col">
+    <div class="card">
+      <h2>プレビュー</h2>
+      <div class="sheet-outer">
+        <div class="price-sheet" id="previewSheet"></div>
+      </div>
+      <div class="note">
+        ※ 在庫状況(残りわずか・完売)は一覧に自動で反映されます。当日の実際の在庫は都度更新してください。
+        ※ 印刷するとA4またはA5サイズで出力できます(お使いのプリンタ設定に従います)。
+      </div>
+      <div class="btn-row no-print">
+        <button class="btn" id="printBtn">お品書きを印刷</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p>入力内容は一切外部に送信されません(すべてブラウザ内で完結します)。</p>
+  <p>不具合・ご要望は BOOTHメッセージ、または X(Twitter) <a href="https://x.com/uuhai0625" target="_blank" rel="noopener">@uuhai0625</a> まで。</p>
+</footer>
+
+<script>
+function esc(s) {
+  return (s || "").toString().replace(/[<>&"']/g, function (c) {
+    return { "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&#39;" }[c];
+  });
+}
+
+var SAVE_KEY = "oshinagaki_maker_v1";
+
+var THEMES = [
+  { id: "amber", from: "#d9a15a", to: "#a86a24" },
+  { id: "pink", from: "#e58fa8", to: "#b14766" },
+  { id: "mint", from: "#6fc2b0", to: "#2d8f79" },
+  { id: "navy", from: "#5b6fa8", to: "#33406b" }
+];
+
+var STATUS_OPTIONS = [
+  { value: "normal", label: "通常" },
+  { value: "few", label: "残りわずか" },
+  { value: "soldout", label: "完売" }
+];
+
+function newItem() {
+  return { name: "", price: null, sub: "", status: "normal" };
+}
+
+var data = {
+  circleName: "",
+  eventName: "",
+  message: "",
+  items: [newItem()],
+  theme: "amber"
+};
+
+function renderItems() {
+  var wrap = document.getElementById("itemRows");
+  wrap.innerHTML = "";
+  data.items.forEach(function (item, idx) {
+    var row = document.createElement("div");
+    row.className = "item-row";
+    var statusOptionsHtml = STATUS_OPTIONS.map(function (o) {
+      return '<option value="' + o.value + '"' + (item.status === o.value ? " selected" : "") + '>' + o.label + '</option>';
+    }).join("");
+    row.innerHTML =
+      '<div class="item-top">' +
+      '<input type="text" class="nameInput" data-idx="' + idx + '" aria-label="頒布物名" placeholder="例: 星屑のレシピ(新刊)" value="' + esc(item.name) + '">' +
+      '<input type="text" class="priceInput" data-idx="' + idx + '" aria-label="価格(円)" placeholder="円" value="' + (item.price != null ? item.price : "") + '">' +
+      '</div>' +
+      '<div class="item-top">' +
+      '<input type="text" class="subInput" data-idx="' + idx + '" aria-label="ジャンル・一言" placeholder="ジャンル・一言(任意)" value="' + esc(item.sub) + '">' +
+      '<select class="statusSelect" data-idx="' + idx + '" aria-label="在庫状況">' + statusOptionsHtml + '</select>' +
+      '<button type="button" class="removeItemBtn" data-idx="' + idx + '" aria-label="この頒布物を削除">✕</button>' +
+      '</div>';
+    wrap.appendChild(row);
+  });
+
+  wrap.querySelectorAll(".nameInput").forEach(function (el) {
+    el.addEventListener("input", function () { data.items[Number(el.dataset.idx)].name = el.value; renderPreview(); });
+  });
+  wrap.querySelectorAll(".priceInput").forEach(function (el) {
+    el.addEventListener("input", function () {
+      var v = el.value.replace(/[^0-9]/g, "");
+      data.items[Number(el.dataset.idx)].price = v === "" ? null : Math.max(0, Number(v));
+      renderPreview();
+    });
+  });
+  wrap.querySelectorAll(".subInput").forEach(function (el) {
+    el.addEventListener("input", function () { data.items[Number(el.dataset.idx)].sub = el.value; renderPreview(); });
+  });
+  wrap.querySelectorAll(".statusSelect").forEach(function (el) {
+    el.addEventListener("change", function () { data.items[Number(el.dataset.idx)].status = el.value; renderPreview(); });
+  });
+  wrap.querySelectorAll(".removeItemBtn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      data.items.splice(Number(btn.dataset.idx), 1);
+      renderItems();
+      renderPreview();
+    });
+  });
+}
+
+function renderThemeOptions() {
+  var wrap = document.getElementById("themeOptions");
+  wrap.innerHTML = "";
+  THEMES.forEach(function (t) {
+    var sw = document.createElement("div");
+    sw.className = "theme-swatch" + (data.theme === t.id ? " selected" : "");
+    sw.style.background = "linear-gradient(135deg," + t.from + "," + t.to + ")";
+    sw.setAttribute("role", "button");
+    sw.setAttribute("aria-label", "テーマ: " + t.id);
+    sw.addEventListener("click", function () {
+      data.theme = t.id;
+      renderThemeOptions();
+      renderPreview();
+    });
+    wrap.appendChild(sw);
+  });
+}
+
+function currentTheme() {
+  return THEMES.filter(function (t) { return t.id === data.theme; })[0] || THEMES[0];
+}
+
+function fmtYen(n) {
+  if (n == null || !isFinite(n)) return "";
+  return "¥" + Math.round(n).toLocaleString();
+}
+
+function buildSheetHtml() {
+  var t = currentTheme();
+  var itemsHtml = data.items.filter(function (i) { return i.name || i.price != null; }).map(function (item) {
+    var isSoldout = item.status === "soldout";
+    var statusTag = "";
+    if (item.status === "few") statusTag = '<span class="statusTag few">残りわずか</span>';
+    if (item.status === "soldout") statusTag = '<span class="statusTag">完売</span>';
+    return '<div class="sheetItem' + (isSoldout ? " soldout" : "") + '">' +
+      '<div>' +
+      '<div class="itemName">' + esc(item.name || "(名称未設定)") + statusTag + '</div>' +
+      (item.sub ? '<div class="itemSub">' + esc(item.sub) + '</div>' : '') +
+      '</div>' +
+      '<div class="itemPrice">' + esc(fmtYen(item.price)) + '</div>' +
+      '</div>';
+  }).join("");
+
+  return '<div class="sheetHead" style="background:linear-gradient(135deg,' + t.from + ',' + t.to + ');">' +
+    '<div class="circleName">' + esc(data.circleName || "サークル名") + '</div>' +
+    (data.eventName ? '<div class="eventName">' + esc(data.eventName) + '</div>' : '') +
+    (data.message ? '<div class="message">' + esc(data.message) + '</div>' : '') +
+    '</div>' +
+    '<div class="sheetBody">' + (itemsHtml || '<div style="color:var(--muted); text-align:center; padding:20px 0;">頒布物を追加してください</div>') + '</div>';
+}
+
+function renderPreview() {
+  document.getElementById("previewSheet").innerHTML = buildSheetHtml();
+}
+
+document.getElementById("circleName").addEventListener("input", function (e) { data.circleName = e.target.value; renderPreview(); });
+document.getElementById("eventName").addEventListener("input", function (e) { data.eventName = e.target.value; renderPreview(); });
+document.getElementById("message").addEventListener("input", function (e) { data.message = e.target.value; renderPreview(); });
+
+document.getElementById("addItemBtn").addEventListener("click", function () {
+  data.items.push(newItem());
+  renderItems();
+  renderPreview();
+});
+
+document.getElementById("saveBtn").addEventListener("click", function () {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    alert("保存しました。");
+  } catch (e) {
+    alert("保存に失敗しました(プライベートモード等ではご利用いただけない場合があります)。");
+  }
+});
+
+document.getElementById("loadBtn").addEventListener("click", function () {
+  var raw;
+  try {
+    raw = localStorage.getItem(SAVE_KEY);
+  } catch (e) {
+    raw = null;
+  }
+  if (!raw) {
+    alert("保存されたデータが見つかりませんでした。");
+    return;
+  }
+  var loaded;
+  try {
+    loaded = JSON.parse(raw);
+  } catch (e) {
+    alert("保存データの形式が正しくないため読み込めませんでした。");
+    return;
+  }
+  if (!loaded || typeof loaded !== "object" || !Array.isArray(loaded.items)) {
+    alert("保存データの形式が正しくないため読み込めませんでした。");
+    return;
+  }
+  data.circleName = typeof loaded.circleName === "string" ? loaded.circleName : "";
+  data.eventName = typeof loaded.eventName === "string" ? loaded.eventName : "";
+  data.message = typeof loaded.message === "string" ? loaded.message : "";
+  data.items = loaded.items.filter(function (i) { return i && typeof i === "object"; }).map(function (i) {
+    return {
+      name: typeof i.name === "string" ? i.name : "",
+      price: typeof i.price === "number" ? i.price : null,
+      sub: typeof i.sub === "string" ? i.sub : "",
+      status: STATUS_OPTIONS.some(function (o) { return o.value === i.status; }) ? i.status : "normal"
+    };
+  });
+  if (data.items.length === 0) data.items = [newItem()];
+  data.theme = THEMES.some(function (t) { return t.id === loaded.theme; }) ? loaded.theme : "amber";
+
+  document.getElementById("circleName").value = data.circleName;
+  document.getElementById("eventName").value = data.eventName;
+  document.getElementById("message").value = data.message;
+  renderItems();
+  renderThemeOptions();
+  renderPreview();
+  alert("読み込みました。");
+});
+
+document.getElementById("printBtn").addEventListener("click", function () {
+  window.print();
+});
+
+renderItems();
+renderThemeOptions();
+renderPreview();
+</script>
+
+</body>
+</html>
