@@ -96,8 +96,8 @@
     border-radius: 6px;
     color: var(--muted);
     cursor: pointer;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: 44px;
+    min-height: 44px;
   }
   .btn {
     background: var(--accent);
@@ -280,6 +280,7 @@ var THEMES = [
 var STATUS_OPTIONS = [
   { value: "normal", label: "通常" },
   { value: "few", label: "残りわずか" },
+  { value: "reserved", label: "取り置き中" },
   { value: "soldout", label: "完売" }
 ];
 
@@ -375,6 +376,7 @@ function buildSheetHtml() {
     var isSoldout = item.status === "soldout";
     var statusTag = "";
     if (item.status === "few") statusTag = '<span class="statusTag few">残りわずか</span>';
+    if (item.status === "reserved") statusTag = '<span class="statusTag few">取り置き中</span>';
     if (item.status === "soldout") statusTag = '<span class="statusTag">完売</span>';
     return '<div class="sheetItem' + (isSoldout ? " soldout" : "") + '">' +
       '<div>' +
