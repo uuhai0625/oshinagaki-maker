@@ -5,6 +5,7 @@
   (function() {
     var GA_ID = 'G-9S2BZ434HD';
     var isLocalDev = ['localhost', '127.0.0.1', ''].includes(location.hostname);
+    try { if (location.search.indexOf('no_ga=1') > -1) localStorage.setItem('no_ga', '1'); if (localStorage.getItem('no_ga') === '1') return; } catch (e) {}
     if (isLocalDev) return;
     var s = document.createElement('script');
     s.async = true;
@@ -24,12 +25,12 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="頒布物と価格を入れるだけで、即売会の卓上に置けるお品書きシートを作成できる同人誌向けの無料ツール。登録不要、入力内容は外部に送信されません。">
+<meta name="description" content="頒布物と価格を入れるだけで、即売会の卓上に置けるお品書きシートを作成できる同人誌向けの無料ツール。X用画像(PNG)の書き出しと当日の完売ワンタップ更新に対応。登録不要、入力内容は外部に送信されません。">
 <link rel="canonical" href="https://uuhai0625.github.io/oshinagaki-maker/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ja_JP">
 <meta property="og:title" content="同人誌 お品書きメーカー(完全無料)">
-<meta property="og:description" content="頒布物と価格を入れるだけで、即売会の卓上に置けるお品書きシートを作成できる同人誌向けの無料ツール。登録不要、入力内容は外部に送信されません。">
+<meta property="og:description" content="頒布物と価格を入れるだけで、即売会の卓上に置けるお品書きシートを作成できる同人誌向けの無料ツール。X用画像(PNG)の書き出しと当日の完売ワンタップ更新に対応。登録不要、入力内容は外部に送信されません。">
 <meta property="og:url" content="https://uuhai0625.github.io/oshinagaki-maker/">
 <title>同人誌 お品書きメーカー(完全無料)</title>
 <style>
@@ -40,7 +41,7 @@
     --card: #ffffff;
     --border: #ecdfc9;
     --text: #2e2823;
-    --muted: #8a7d6c;
+    --muted: #6f6252;
     --soldout: #c94a4a;
   }
   * { box-sizing: border-box; }
@@ -68,7 +69,7 @@
   }
   @media (min-width: 900px) {
     main { grid-template-columns: 1fr 1fr; align-items: start; }
-    .preview-col { position: sticky; top: 20px; }
+    .preview-col { position: sticky; top: 20px; max-height: calc(100vh - 40px); overflow-y: auto; }
   }
   .card {
     background: var(--card);
@@ -135,6 +136,8 @@
     padding: 9px 16px;
     font-size: 14px;
     cursor: pointer;
+    min-height: 44px;
+    touch-action: manipulation;
   }
   .btn.ghost {
     background: none;
@@ -210,10 +213,52 @@
     margin-left: 6px;
     vertical-align: middle;
   }
-  .price-sheet .statusTag.few { background: #c17a2e; }
+  .price-sheet .statusTag.few { background: #8a561c; }
+  .price-sheet .statusTag.reserved { background: #2a6f8a; }
+
+  /* --- stock quick update / export --- */
+  .stock-list { display: flex; flex-direction: column; gap: 8px; }
+  .stock-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    touch-action: manipulation;
+  }
+  .stock-btn .stockName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: bold; }
+  .stock-btn .stockState {
+    flex: none;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .stock-btn.few .stockState { background: #fff3e0; border-color: #e8c28a; color: #8a561c; }
+  .stock-btn.reserved .stockState { background: #e3f1f7; border-color: #9cc6d8; color: #1f566d; }
+  .stock-btn.soldout .stockState { background: var(--soldout); border-color: var(--soldout); color: #fff; }
+  .stock-btn.soldout .stockName { text-decoration: line-through; color: var(--soldout); }
+  .export-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .export-row select { padding: 8px 6px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; min-height: 44px; }
+  .check-inline { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; min-height: 44px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .jump-link { color: #fff; font-size: 12px; text-decoration: underline; }
+  @media (max-width: 600px) { .export-row .btn { width: 100%; } }
 
   @media print {
-    header, .form-col, .btn-row, .no-print { display: none !important; }
+    header, .form-col, .btn-row, .no-print, .note { display: none !important; }
     body { background: #fff; }
     main { display: block; padding: 0; max-width: none; }
     .preview-col { position: static; }
@@ -226,7 +271,8 @@
 
 <header>
   <h1>同人誌 お品書きメーカー</h1>
-  <p>頒布物と価格を入れるだけで、卓上に置けるお品書きシートを作成(完全無料・登録不要)</p>
+  <p>頒布物と価格を入れるだけで、卓上に置けるお品書きシートを作成(完全無料・登録不要)。X用画像(PNG)の書き出しと、当日の完売ワンタップ更新にも対応</p>
+  <p style="margin-top:8px;"><a class="jump-link" href="#stockCard">当日の完売更新はこちら ↓</a></p>
 </header>
 
 <main>
@@ -237,15 +283,15 @@
       <h2>① 基本情報</h2>
       <div class="field">
         <label for="circleName">サークル名</label>
-        <input type="text" id="circleName" placeholder="例: つきよみ堂">
+        <input type="text" id="circleName" maxlength="40" placeholder="例: つきよみ堂">
       </div>
       <div class="field">
         <label for="eventName">イベント名(任意)</label>
-        <input type="text" id="eventName" placeholder="例: 〇〇即売会 スペース あ-12">
+        <input type="text" id="eventName" maxlength="60" placeholder="例: 〇〇即売会 スペース あ-12">
       </div>
       <div class="field">
         <label for="message">一言メッセージ(任意)</label>
-        <textarea id="message" placeholder="例: お手に取っていただきありがとうございます!"></textarea>
+        <textarea id="message" maxlength="200" placeholder="例: お手に取っていただきありがとうございます!"></textarea>
       </div>
     </div>
 
@@ -263,10 +309,18 @@
     <div class="btn-row no-print">
       <button class="btn" id="saveBtn">このブラウザに保存</button>
       <button class="btn ghost" id="loadBtn">保存データを読み込む</button>
+      <button class="btn ghost" id="clearBtn">入力をすべてクリア</button>
     </div>
   </div>
 
   <div class="preview-col">
+    <div class="card no-print" id="stockCard">
+      <h2>在庫クイック更新(当日用)</h2>
+      <div class="stock-list" id="stockList"></div>
+      <div class="sr-only" id="stockLive" role="status" aria-live="polite"></div>
+      <div class="note">頒布物名をタップすると「通常 → 残りわずか → 完売 → 通常」と切り替わり、下のプレビューにすぐ反映されます(「取り置き可」は②の在庫状況から選べます。タップすると完売になります)。</div>
+    </div>
+
     <div class="card">
       <h2>プレビュー</h2>
       <div class="sheet-outer">
@@ -275,9 +329,25 @@
       <div class="note">
         ※ 在庫状況(残りわずか・完売)は一覧に自動で反映されます。当日の実際の在庫は都度更新してください。
         ※ 印刷するとA4またはA5サイズで出力できます(お使いのプリンタ設定に従います)。
+        ※ PNG画像はXなどのSNS投稿用に書き出せます(画像はこのブラウザ内で作られ、外部には送信されません)。複数枚をまとめて投稿すると、Xでは横長(16:9)に切り取られて表示されます。
+        ※ 入力内容と在庫状況は、このブラウザに自動保存されます(外部には送信されません)。
       </div>
       <div class="btn-row no-print">
         <button class="btn" id="printBtn">お品書きを印刷</button>
+      </div>
+      <div class="export-row no-print">
+        <select id="exportSize" aria-label="書き出しサイズ">
+          <option value="1200x675">X用 横長 1200×675</option>
+          <option value="1080x1350">X用 縦長 1080×1350</option>
+          <option value="1080x1080">正方形 1080×1080</option>
+        </select>
+        <label class="check-inline"><input type="checkbox" id="exportHires"> 2倍の高画質</label>
+        <label class="check-inline"><input type="checkbox" id="exportCredit" checked> 右下に小さくクレジット</label>
+        <button class="btn" id="pngBtn">PNG画像を書き出す</button>
+      </div>
+      <div class="note no-print" id="exportStatus" role="status" style="display:none;"></div>
+      <div class="no-print" id="exportPreviewWrap" style="display:none; margin-top:10px;">
+        <img id="exportPreview" alt="書き出した画像のプレビュー" style="max-width:100%; border:1px solid var(--border); border-radius:8px;">
       </div>
     </div>
   </div>
@@ -285,7 +355,8 @@
 </main>
 
 <footer>
-  <p>入力内容は一切外部に送信されません(すべてブラウザ内で完結します)。</p>
+  <p>入力内容は一切外部に送信されません(すべてブラウザ内で完結し、このブラウザに自動保存されます)。</p>
+  <p>アクセス解析(Google Analytics)で、閲覧数やボタン操作の回数のみを計測しています(入力内容は含まれません)。</p>
   <p>不具合・ご要望は BOOTHメッセージ、または X(Twitter) <a href="https://x.com/uuhai0625" target="_blank" rel="noopener">@uuhai0625</a> まで。</p>
   <p>同人活動の収支管理は買い切りツールの<a href="https://uuhai0625.booth.pm/items/8812753" target="_blank" rel="noopener">同人活動収支・経費可視化シートメーカー</a>や<a href="https://uuhai0625.booth.pm/items/8807131" target="_blank" rel="noopener">クリエイター手取り計算機</a>もどうぞ。<a href="https://uuhai0625.booth.pm/" target="_blank" rel="noopener">他の無料ツール・買い切りツールもBOOTHで公開中</a>。</p>
 </footer>
@@ -298,18 +369,19 @@ function esc(s) {
 }
 
 var SAVE_KEY = "oshinagaki_maker_v1";
+var AUTO_KEY = "oshinagaki_maker_v1_auto";
 
 var THEMES = [
-  { id: "amber", from: "#d9a15a", to: "#a86a24" },
-  { id: "pink", from: "#e58fa8", to: "#b14766" },
-  { id: "mint", from: "#6fc2b0", to: "#2d8f79" },
+  { id: "amber", from: "#c98a3d", to: "#8a561c" },
+  { id: "pink", from: "#d9738f", to: "#a63a5c" },
+  { id: "mint", from: "#46a28e", to: "#2a7561" },
   { id: "navy", from: "#5b6fa8", to: "#33406b" }
 ];
 
 var STATUS_OPTIONS = [
   { value: "normal", label: "通常" },
   { value: "few", label: "残りわずか" },
-  { value: "reserved", label: "取り置き中" },
+  { value: "reserved", label: "取り置き可" },
   { value: "soldout", label: "完売" }
 ];
 
@@ -336,11 +408,11 @@ function renderItems() {
     }).join("");
     row.innerHTML =
       '<div class="item-top">' +
-      '<input type="text" class="nameInput" data-idx="' + idx + '" aria-label="頒布物名" placeholder="例: 星屑のレシピ(新刊)" value="' + esc(item.name) + '">' +
-      '<input type="text" class="priceInput" data-idx="' + idx + '" aria-label="価格(円)" placeholder="円" value="' + (item.price != null ? item.price : "") + '">' +
+      '<input type="text" class="nameInput" data-idx="' + idx + '" maxlength="60" aria-label="頒布物名" placeholder="例: 星屑のレシピ(新刊)" value="' + esc(item.name) + '">' +
+      '<input type="text" class="priceInput" data-idx="' + idx + '" maxlength="9" inputmode="numeric" aria-label="価格(円)" placeholder="円" value="' + (item.price != null ? item.price : "") + '">' +
       '</div>' +
       '<div class="item-top">' +
-      '<input type="text" class="subInput" data-idx="' + idx + '" aria-label="ジャンル・一言" placeholder="ジャンル・一言(任意)" value="' + esc(item.sub) + '">' +
+      '<input type="text" class="subInput" data-idx="' + idx + '" maxlength="60" aria-label="ジャンル・一言" placeholder="ジャンル・一言(任意)" value="' + esc(item.sub) + '">' +
       '<select class="statusSelect" data-idx="' + idx + '" aria-label="在庫状況">' + statusOptionsHtml + '</select>' +
       '<button type="button" class="removeItemBtn" data-idx="' + idx + '" aria-label="この頒布物を削除">✕</button>' +
       '</div>';
@@ -399,20 +471,25 @@ function fmtYen(n) {
   return "¥" + Math.round(n).toLocaleString();
 }
 
+function fmtPrice(n) {
+  if (n === 0) return "無料";
+  return fmtYen(n);
+}
+
 function buildSheetHtml() {
   var t = currentTheme();
   var itemsHtml = data.items.filter(function (i) { return i.name || i.price != null; }).map(function (item) {
     var isSoldout = item.status === "soldout";
     var statusTag = "";
     if (item.status === "few") statusTag = '<span class="statusTag few">残りわずか</span>';
-    if (item.status === "reserved") statusTag = '<span class="statusTag few">取り置き中</span>';
+    if (item.status === "reserved") statusTag = '<span class="statusTag reserved">取り置き可</span>';
     if (item.status === "soldout") statusTag = '<span class="statusTag">完売</span>';
     return '<div class="sheetItem' + (isSoldout ? " soldout" : "") + '">' +
       '<div>' +
       '<div class="itemName">' + esc(item.name || "(名称未設定)") + statusTag + '</div>' +
       (item.sub ? '<div class="itemSub">' + esc(item.sub) + '</div>' : '') +
       '</div>' +
-      '<div class="itemPrice">' + esc(fmtYen(item.price)) + '</div>' +
+      '<div class="itemPrice">' + esc(fmtPrice(item.price)) + '</div>' +
       '</div>';
   }).join("");
 
@@ -426,6 +503,8 @@ function buildSheetHtml() {
 
 function renderPreview() {
   document.getElementById("previewSheet").innerHTML = buildSheetHtml();
+  renderStock();
+  saveAuto();
 }
 
 document.getElementById("circleName").addEventListener("input", function (e) { data.circleName = e.target.value; renderPreview(); });
@@ -447,6 +526,64 @@ document.getElementById("saveBtn").addEventListener("click", function () {
   }
 });
 
+var LIMITS = { circle: 40, event: 60, message: 200, name: 60, sub: 60 };
+
+function clampStr(v, n) {
+  return typeof v === "string" ? v.slice(0, n) : "";
+}
+
+function normalizeLoaded(loaded) {
+  if (!loaded || typeof loaded !== "object" || !Array.isArray(loaded.items)) return null;
+  var items = loaded.items.filter(function (i) { return i && typeof i === "object"; }).map(function (i) {
+    return {
+      name: clampStr(i.name, LIMITS.name),
+      price: (typeof i.price === "number" && isFinite(i.price) && i.price >= 0 && i.price <= 999999999) ? Math.round(i.price) : null,
+      sub: clampStr(i.sub, LIMITS.sub),
+      status: STATUS_OPTIONS.some(function (o) { return o.value === i.status; }) ? i.status : "normal"
+    };
+  });
+  if (items.length === 0) items = [newItem()];
+  return {
+    circleName: clampStr(loaded.circleName, LIMITS.circle),
+    eventName: clampStr(loaded.eventName, LIMITS.event),
+    message: clampStr(loaded.message, LIMITS.message),
+    items: items,
+    theme: THEMES.some(function (t) { return t.id === loaded.theme; }) ? loaded.theme : "amber"
+  };
+}
+
+function applyData(n) {
+  data.circleName = n.circleName;
+  data.eventName = n.eventName;
+  data.message = n.message;
+  data.items = n.items;
+  data.theme = n.theme;
+  document.getElementById("circleName").value = data.circleName;
+  document.getElementById("eventName").value = data.eventName;
+  document.getElementById("message").value = data.message;
+  renderItems();
+  renderThemeOptions();
+  renderPreview();
+}
+
+function saveAuto() {
+  try {
+    localStorage.setItem(AUTO_KEY, JSON.stringify(data));
+  } catch (e) {}
+}
+
+var restoredFromAuto = false;
+function restoreAuto() {
+  try {
+    var raw = localStorage.getItem(AUTO_KEY);
+    if (!raw) return;
+    var n = normalizeLoaded(JSON.parse(raw));
+    if (!n) return;
+    applyData(n);
+    restoredFromAuto = true;
+  } catch (e) {}
+}
+
 document.getElementById("loadBtn").addEventListener("click", function () {
   var raw;
   try {
@@ -458,44 +595,344 @@ document.getElementById("loadBtn").addEventListener("click", function () {
     alert("保存されたデータが見つかりませんでした。");
     return;
   }
-  var loaded;
+  var n;
   try {
-    loaded = JSON.parse(raw);
+    n = normalizeLoaded(JSON.parse(raw));
   } catch (e) {
+    n = null;
+  }
+  if (!n) {
     alert("保存データの形式が正しくないため読み込めませんでした。");
     return;
   }
-  if (!loaded || typeof loaded !== "object" || !Array.isArray(loaded.items)) {
-    alert("保存データの形式が正しくないため読み込めませんでした。");
-    return;
-  }
-  data.circleName = typeof loaded.circleName === "string" ? loaded.circleName : "";
-  data.eventName = typeof loaded.eventName === "string" ? loaded.eventName : "";
-  data.message = typeof loaded.message === "string" ? loaded.message : "";
-  data.items = loaded.items.filter(function (i) { return i && typeof i === "object"; }).map(function (i) {
-    return {
-      name: typeof i.name === "string" ? i.name : "",
-      price: typeof i.price === "number" ? i.price : null,
-      sub: typeof i.sub === "string" ? i.sub : "",
-      status: STATUS_OPTIONS.some(function (o) { return o.value === i.status; }) ? i.status : "normal"
-    };
-  });
-  if (data.items.length === 0) data.items = [newItem()];
-  data.theme = THEMES.some(function (t) { return t.id === loaded.theme; }) ? loaded.theme : "amber";
-
-  document.getElementById("circleName").value = data.circleName;
-  document.getElementById("eventName").value = data.eventName;
-  document.getElementById("message").value = data.message;
-  renderItems();
-  renderThemeOptions();
-  renderPreview();
+  applyData(n);
   alert("読み込みました。");
 });
 
+document.getElementById("clearBtn").addEventListener("click", function () {
+  if (!confirm("入力内容と在庫状況をすべてクリアします。よろしいですか?")) return;
+  applyData({ circleName: "", eventName: "", message: "", items: [newItem()], theme: "amber" });
+});
+
 document.getElementById("printBtn").addEventListener("click", function () {
+  track("print_click", {});
   window.print();
 });
 
+// ---- usage tracking (counts only; no input content is ever sent) ----
+function track(name, params) {
+  try {
+    window.dataLayer = window.dataLayer || [];
+    (function () { window.dataLayer.push(arguments); })("event", name, params || {});
+  } catch (e) {}
+}
+
+// ---- stock quick update ----
+var STOCK_NEXT = { normal: "few", few: "soldout", soldout: "normal", reserved: "soldout" };
+
+function statusLabel(v) {
+  var o = STATUS_OPTIONS.filter(function (s) { return s.value === v; })[0];
+  return o ? o.label : "通常";
+}
+
+function visibleItems() {
+  return data.items.map(function (item, idx) { return { item: item, idx: idx }; })
+    .filter(function (o) { return o.item.name || o.item.price != null; });
+}
+
+function renderStock() {
+  var wrap = document.getElementById("stockList");
+  wrap.innerHTML = "";
+  var list = visibleItems();
+  if (list.length === 0) {
+    wrap.innerHTML = '<div class="note" style="margin-top:0;">頒布物を入力すると、ここに在庫ボタンが並びます。</div>';
+    return;
+  }
+  list.forEach(function (o) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "stock-btn " + o.item.status;
+    b.setAttribute("data-idx", String(o.idx));
+    b.setAttribute("aria-label", (o.item.name || "(名称未設定)") + " 現在: " + statusLabel(o.item.status) + "。タップで切り替え");
+    b.innerHTML = '<span class="stockName">' + esc(o.item.name || "(名称未設定)") + '</span><span class="stockState">' + esc(statusLabel(o.item.status)) + '</span>';
+    b.addEventListener("click", function () {
+      o.item.status = STOCK_NEXT[o.item.status] || "normal";
+      track("stock_quick_update", { to_status: o.item.status, revisit: restoredFromAuto ? 1 : 0 });
+      renderItems();
+      renderPreview();
+      document.getElementById("stockLive").textContent = (o.item.name || "(名称未設定)") + ": " + statusLabel(o.item.status);
+      var nb = document.querySelector('#stockList [data-idx="' + o.idx + '"]');
+      if (nb) nb.focus();
+    });
+    wrap.appendChild(b);
+  });
+}
+
+// ---- PNG export (drawn on a canvas in the browser) ----
+var EXPORT_SIZES = { "1200x675": [1200, 675], "1080x1350": [1080, 1350], "1080x1080": [1080, 1080] };
+var FONT_STACK = '"Hiragino Sans","Yu Gothic","Meiryo",sans-serif';
+
+function splitChars(text) {
+  try {
+    if (typeof Intl !== "undefined" && Intl.Segmenter) {
+      return Array.from(new Intl.Segmenter("ja", { granularity: "grapheme" }).segment(text), function (s) { return s.segment; });
+    }
+  } catch (e) {}
+  return Array.from(text);
+}
+
+function fitText(ctx, text, maxW) {
+  if (maxW <= 0) return "";
+  text = text.slice(0, 200);
+  if (ctx.measureText(text).width <= maxW) return text;
+  var chars = splitChars(text);
+  var lo = 0, hi = chars.length;
+  while (lo < hi) {
+    var mid = Math.ceil((lo + hi) / 2);
+    if (ctx.measureText(chars.slice(0, mid).join("") + "…").width <= maxW) lo = mid; else hi = mid - 1;
+  }
+  return chars.slice(0, Math.max(1, lo)).join("") + "…";
+}
+
+function wrapLines(ctx, text, maxW, maxLines) {
+  var lines = [];
+  text.slice(0, 400).split(/\r?\n/).forEach(function (para) {
+    var cur = "";
+    splitChars(para).forEach(function (ch) {
+      if (cur && ctx.measureText(cur + ch).width > maxW) { lines.push(cur); cur = ch; }
+      else { cur += ch; }
+    });
+    lines.push(cur);
+  });
+  if (lines.length > maxLines) {
+    lines = lines.slice(0, maxLines);
+    lines[maxLines - 1] = fitText(ctx, lines[maxLines - 1] + "…", maxW);
+  }
+  return lines;
+}
+
+function pathRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawSheet(W, H, scale, credit) {
+  var canvas = document.createElement("canvas");
+  canvas.width = Math.round(W * scale);
+  canvas.height = Math.round(H * scale);
+  var ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  var u = Math.min(W / 1200, H / 675);
+  var t = currentTheme();
+  var C_TEXT = "#2e2823", C_MUTED = "#6f6252", C_BORDER = "#ecdfc9", C_SOLD = "#c94a4a", C_FEW = "#8a561c", C_RES = "#2a6f8a";
+
+  ctx.fillStyle = "#fbf7f1";
+  ctx.fillRect(0, 0, W, H);
+
+  // header
+  var padX = 48 * u;
+  var textW = W - padX * 2;
+  var eventName = (data.eventName || "").trim();
+  var message = (data.message || "").trim();
+  ctx.textBaseline = "alphabetic";
+  ctx.font = "bold " + (46 * u) + "px " + FONT_STACK;
+  var circleText = fitText(ctx, data.circleName || "サークル名", textW);
+  ctx.font = (24 * u) + "px " + FONT_STACK;
+  var eventText = eventName ? fitText(ctx, eventName, textW) : "";
+  ctx.font = (20 * u) + "px " + FONT_STACK;
+  var msgLines = message ? wrapLines(ctx, message, textW, 2) : [];
+  var headerH = 30 * u + 56 * u + (eventText ? 34 * u : 0) + (msgLines.length ? 12 * u + msgLines.length * 28 * u : 0) + 24 * u;
+  var grad = ctx.createLinearGradient(0, 0, W, headerH);
+  grad.addColorStop(0, t.from);
+  grad.addColorStop(1, t.to);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, headerH);
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "center";
+  var y = 74 * u;
+  ctx.font = "bold " + (46 * u) + "px " + FONT_STACK;
+  ctx.fillText(circleText, W / 2, y);
+  if (eventText) {
+    ctx.font = (24 * u) + "px " + FONT_STACK;
+    y += 36 * u;
+    ctx.fillText(eventText, W / 2, y);
+  }
+  if (msgLines.length) {
+    ctx.font = (20 * u) + "px " + FONT_STACK;
+    y += 12 * u;
+    msgLines.forEach(function (l) { y += 28 * u; ctx.fillText(l, W / 2, y); });
+  }
+
+  // body
+  var items = data.items.filter(function (i) { return i.name || i.price != null; });
+  var footerH = (credit ? 44 : 22) * u;
+  var top = headerH + 22 * u;
+  var avail = H - top - footerH;
+  var needSecond = items.some(function (i) { return (i.sub || "").trim() || i.status !== "normal"; });
+  var baseRowH = (needSecond ? 84 : 62) * u;
+  var maxRows = Math.max(1, Math.floor(avail / baseRowH));
+  var cols = 1;
+  while (cols < 2 && cols * maxRows < items.length) cols++;
+  var rowsPerCol = Math.min(maxRows, Math.ceil(items.length / cols));
+  var shown = Math.min(items.length, cols * rowsPerCol);
+  var grow = Math.min(2, Math.max(1, avail / (rowsPerCol * baseRowH)));
+  var rowH = baseRowH * grow;
+  var bodyTop = top + Math.max(0, (avail - rowsPerCol * rowH) * 0.25);
+  var marginX = 48 * u, gap = 36 * u;
+  var colW = (W - marginX * 2 - gap * (cols - 1)) / cols;
+  var nameSize = (cols > 1 ? 28 : 32) * u * grow;
+  var subSize = (cols > 1 ? 17 : 18) * u * grow;
+  var tagSize = (cols > 1 ? 14 : 15) * u * grow;
+  var inlineTag = cols === 1;
+
+  for (var i = 0; i < shown; i++) {
+    var item = items[i];
+    var col = Math.floor(i / rowsPerCol), row = i % rowsPerCol;
+    var x = marginX + col * (colW + gap);
+    var ry = bodyTop + row * rowH;
+    var soldout = item.status === "soldout";
+    var priceStr = fmtPrice(item.price);
+    ctx.textAlign = "left";
+    ctx.font = "bold " + nameSize + "px " + FONT_STACK;
+    var priceW = priceStr ? ctx.measureText(priceStr).width : 0;
+    var tagLabel = soldout ? "完売" : item.status === "few" ? "残りわずか" : item.status === "reserved" ? "取り置き可" : "";
+    var tagColor = soldout ? C_SOLD : item.status === "reserved" ? C_RES : C_FEW;
+    ctx.font = "bold " + tagSize + "px " + FONT_STACK;
+    var tagW = tagLabel ? ctx.measureText(tagLabel).width + 16 * u : 0;
+    var nameMax = colW - priceW - (priceW ? 20 * u : 0) - (inlineTag && tagW ? tagW + 10 * u : 0);
+    var sub = (item.sub || "").replace(/\s*\r?\n\s*/g, " / ").trim();
+    var second = !!(sub || (!inlineTag && tagLabel));
+    var block = nameSize + (second ? 8 * u + subSize : 0);
+    var off = (rowH - block) / 2;
+    var nameBase = ry + off + nameSize * 0.85;
+
+    ctx.font = "bold " + nameSize + "px " + FONT_STACK;
+    var nameText = fitText(ctx, item.name || "(名称未設定)", Math.max(nameMax, nameSize * 2));
+    var nameW = ctx.measureText(nameText).width;
+    ctx.fillStyle = soldout ? C_SOLD : C_TEXT;
+    ctx.fillText(nameText, x, nameBase);
+    var strikeY = nameBase - nameSize * 0.3;
+    var strikeH = Math.max(2, 2 * u);
+    if (soldout) ctx.fillRect(x, strikeY, nameW, strikeH);
+    if (priceStr) {
+      ctx.textAlign = "right";
+      ctx.fillText(priceStr, x + colW, nameBase);
+      if (soldout) ctx.fillRect(x + colW - priceW, strikeY, priceW, strikeH);
+      ctx.textAlign = "left";
+    }
+    var subX = x;
+    if (tagLabel) {
+      var th = tagSize + 10 * u;
+      var tx = inlineTag ? x + nameW + 10 * u : x;
+      var cy = inlineTag ? strikeY : ry + off + nameSize + 8 * u + subSize * 0.5;
+      var ty = cy - th / 2;
+      ctx.fillStyle = tagColor;
+      pathRoundRect(ctx, tx, ty, tagW, th, 4 * u);
+      ctx.fill();
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.font = "bold " + tagSize + "px " + FONT_STACK;
+      ctx.fillText(tagLabel, tx + tagW / 2, ty + th / 2 + tagSize * 0.35);
+      ctx.textAlign = "left";
+      if (!inlineTag) subX = x + tagW + 10 * u;
+    }
+    if (sub) {
+      ctx.font = subSize + "px " + FONT_STACK;
+      ctx.fillStyle = C_MUTED;
+      ctx.fillText(fitText(ctx, sub, colW - (subX - x)), subX, ry + off + nameSize + 8 * u + subSize * 0.85);
+    }
+    if (row < rowsPerCol - 1 && i + 1 < shown) {
+      ctx.save();
+      ctx.setLineDash([6 * u, 6 * u]);
+      ctx.strokeStyle = C_BORDER;
+      ctx.lineWidth = Math.max(1, 1.5 * u);
+      ctx.beginPath();
+      ctx.moveTo(x, ry + rowH);
+      ctx.lineTo(x + colW, ry + rowH);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  if (credit) {
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#857867";
+    ctx.font = (14 * u) + "px " + FONT_STACK;
+    ctx.fillText("お品書きメーカー  uuhai0625.github.io/oshinagaki-maker", W - marginX, H - 14 * u);
+  }
+  return { canvas: canvas, overflow: items.length - shown, itemCount: items.length };
+}
+
+var lastExportUrl = null;
+
+document.getElementById("pngBtn").addEventListener("click", function () {
+  var count = data.items.filter(function (i) { return i.name || i.price != null; }).length;
+  if (count === 0) {
+    alert("頒布物を追加してから書き出してください。");
+    return;
+  }
+  var sel = document.getElementById("exportSize");
+  var key = sel.value;
+  var size = EXPORT_SIZES[key] || EXPORT_SIZES["1200x675"];
+  var hires = document.getElementById("exportHires").checked;
+  var credit = document.getElementById("exportCredit").checked;
+
+  var probe;
+  try {
+    probe = drawSheet(size[0], size[1], 1, credit);
+  } catch (e) {
+    alert("画像の作成に失敗しました。");
+    return;
+  }
+  if (probe.overflow > 0) {
+    var tall = drawSheet(1080, 1350, 1, credit);
+    if (key !== "1080x1350" && tall.overflow === 0) {
+      if (!confirm("頒布物が多く、このサイズでは" + probe.overflow + "点が収まりません。縦長(1080×1350)に切り替えて書き出しますか?")) return;
+      sel.value = "1080x1350";
+      key = "1080x1350";
+      size = EXPORT_SIZES[key];
+    } else if (!confirm("頒布物が多く、" + probe.overflow + "点が画像に収まりません。このまま書き出しますか?")) {
+      return;
+    }
+  }
+
+  var result;
+  try {
+    result = drawSheet(size[0], size[1], hires ? 2 : 1, credit);
+  } catch (e) {
+    alert("画像の作成に失敗しました。");
+    return;
+  }
+  result.canvas.toBlob(function (blob) {
+    if (!blob) {
+      alert("画像の書き出しに失敗しました(ブラウザの制限の可能性があります)。");
+      return;
+    }
+    if (lastExportUrl) URL.revokeObjectURL(lastExportUrl);
+    var url = URL.createObjectURL(blob);
+    lastExportUrl = url;
+    var fileName = "oshinagaki_" + key + (hires ? "@2x" : "") + ".png";
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    document.getElementById("exportPreview").src = url;
+    document.getElementById("exportPreviewWrap").style.display = "block";
+    var st = document.getElementById("exportStatus");
+    st.style.display = "block";
+    st.textContent = "「" + fileName + "」を書き出しました。保存された画像をXの投稿画面で添付してください。保存されない場合(iPhoneなど)は、下の画像を長押しして保存できます。";
+    track("png_export", { size: key, hires: hires ? 1 : 0, items: result.itemCount, credit: credit ? 1 : 0 });
+  }, "image/png");
+});
+
+restoreAuto();
 renderItems();
 renderThemeOptions();
 renderPreview();
